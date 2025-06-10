@@ -11,7 +11,7 @@ let bookmarkConnections = [];
 let eveScoutConnections = [];
 
 const initialize = async () => {
-    systemNames = Data.systems.map(d => d.name);
+    systemNames = Data.systems.map(d => d.name).sort((a, b) => b.length - a.length);
     await loadEveScoutBookmarks();
 
     const buildButton = document.getElementById('build-route');
