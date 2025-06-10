@@ -1,0 +1,204 @@
+body, html {
+    height: 100%;
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: #111827; /* Dark background */
+    color: #d1d5db; /* Light gray text */
+}
+
+/* Main Layout Containers */
+.main-container {
+    display: flex;
+    height: 100vh;
+}
+
+.left-panel {
+    flex-grow: 1;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    background-color: #1f2937; /* Slightly lighter dark panel */
+    overflow: hidden;
+}
+
+.right-panel {
+    width: 800px;
+    flex-shrink: 0;
+    padding: 24px;
+    box-sizing: border-box;
+    background-color: #111827; /* Dark panel */
+    border-left: 1px solid #374151; /* Darker border */
+    display: flex;
+    flex-direction: column;
+}
+
+/* Typography and Status */
+.header-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+}
+
+h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 0;
+    color: #f9fafb; /* Off-white */
+}
+
+.logo {
+    height: 48px;
+    border-radius: 8px;
+}
+
+h2 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin: 0 0 16px 0;
+    color: #f9fafb; /* Off-white */
+}
+
+.status-text {
+    font-size: 0.75rem;
+    color: #9ca3af; /* Mid-light gray */
+    margin-bottom: 24px;
+}
+
+/* Input and Button Area */
+.controls-area {
+    margin-bottom: 16px;
+}
+
+.input-grid {
+    display: grid;
+    grid-template-columns: auto auto;
+    gap: 16px;
+    margin-bottom: 16px;
+    justify-content: start;
+}
+
+.input-group label {
+    display: block;
+    margin-bottom: 4px;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.input-group input {
+    width: 200px;
+    padding: 8px;
+    box-sizing: border-box;
+    background-color: #374151;
+    border: 1px solid #4b5563;
+    border-radius: 6px;
+    font-size: 1rem;
+    color: #f9fafb;
+}
+
+.input-group input:focus {
+    outline: none;
+    border-color: #60a5fa;
+    box-shadow: 0 0 0 1px #60a5fa;
+}
+
+.build-button {
+    padding: 10px 24px;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #d1d5db;
+    background-color: #374151;
+    border: 1px solid #4b5563;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.build-button:hover {
+    background-color: #4b5563;
+}
+
+.jumps-label {
+    margin-bottom: 16px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #d1d5db; /* Light gray */
+}
+
+/* Bar and Label Styling */
+.bars-area {
+    flex-grow: 1;
+    position: relative;
+    overflow-y: auto;
+    padding-right: 90px;
+}
+
+.bar {
+    width: 100%;
+    height: 30px;
+    margin-bottom: 4px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: black;
+    font-weight: 600;
+    font-size: 0.875rem;
+    text-shadow: 0 1px 1px rgba(255,255,255,0.5);
+}
+
+.bar-label {
+    position: absolute;
+    right: 0;
+    width: 80px;
+    font-family: monospace;
+    font-size: 12px;
+    color: #9ca3af; /* Mid-light gray */
+    transform: translateY(-50%);
+    text-align: center;
+}
+.source-text {
+    font-size: 10px;
+    color: #6b7280; /* Mid-dark gray */
+}
+
+/* Right Panel Content */
+.submit-button {
+    padding: 8px 16px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #d1d5db;
+    background-color: #374151;
+    border: 1px solid #4b5563;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+.submit-button:hover {
+    background-color: #4b5563;
+}
+
+.textarea-container {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+}
+
+textarea {
+    width: 100%;
+    flex-grow: 1;
+    box-sizing: border-box;
+    padding: 12px;
+    background-color: #374151;
+    border: 1px solid #4b5563;
+    border-radius: 6px;
+    resize: none;
+    font-size: 0.875rem;
+    color: #f9fafb;
+}
+
+textarea:focus {
+    outline: none;
+    border-color: #60a5fa;
+    box-shadow: 0 0 0 1px #60a5fa;
+}

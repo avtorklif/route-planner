@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Route Planner</title>
+    <link rel="stylesheet" href="main.css">
+    <script src="connections.js"></script>
+    <script src="systems.js"></script>
+    <script src="main.js"></script>
+</head>
+<body>
+
+<div class="main-container">
+    <div class="left-panel">
+        <div class="header-container">
+            <h1>Route Planner</h1>
+            <img class="logo" src="lsh.png" alt="Alliance Logo">
+        </div>
+        <p class="status-text" id="status-text">Eve Scout: loaded</p>
+
+        <div class="controls-area">
+            <div class="input-grid">
+                <div class="input-group">
+                    <label for="from">From</label>
+                    <input type="text" id="from" name="from">
+                </div>
+                <div class="input-group">
+                    <label for="to">To</label>
+                    <input type="text" id="to" name="to">
+                </div>
+            </div>
+            <button id="build-route" class="build-button">Build</button>
+        </div>
+
+        <p class="jumps-label" id="jumps">Jumps: 17</p>
+
+        <div id="bars-container" class="bars-area">
+        </div>
+    </div>
+
+    <div class="right-panel">
+        <div class="bookmarks-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <h2 style="margin: 0;">Boomkars</h2>
+            <button id="submit-bookmarks" class="submit-button">Submit</button>
+        </div>
+        <div class="textarea-container">
+            <textarea id="bookmarks-input" placeholder="Enter bookmarks here..."></textarea>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', async () => {
+        await initialize();
+    });
+</script>
+
+</body>
+</html>
