@@ -9,6 +9,7 @@ if (!window.Data) {
 let systemNames = [];
 let bookmarkConnections = [];
 let eveScoutConnections = [];
+const ignoredSystemsData = [];
 
 const initialize = async () => {
     systemNames = Data.systems.map(d => d.name).sort((a, b) => b.length - a.length);
@@ -21,7 +22,65 @@ const initialize = async () => {
         const bookmarksText = document.getElementById('bookmarks-input').value;
         parseBookmarks(bookmarksText);
     });
+
+    const swapButton = document.getElementById('swap-button');
+    const fromInput = document.getElementById('from');
+    const toInput = document.getElementById('to');
+    swapButton.addEventListener('click', () => {
+        const fromValue = fromInput.value;
+        fromInput.value = toInput.value;
+        toInput.value = fromValue;
+    });
+
+    fromInput.addEventListener("keypress", function(event) {
+        if (event.key === "Enter") {
+            event.preventDefault();
+            generateRoute();
+        }
+    });
+
+    toInput.addEventListener("keypress", function(event) {
+        if (event.key === "Enter") {
+            event.preventDefault();
+            generateRoute();
+        }
+    });
+
+    updateIgnoredSystems();
 };
+
+const updateIgnoredSystems = () => {
+    const ignoredSystemsSection = document.getElementById('ignored-systems-section');
+    if (ignoredSystemsData.length === 0) {
+        ignoredSystemsSection.style.display = 'none';
+    } else {
+        ignoredSystemsSection.style.display = 'block';
+        const ignoredSystemsContainer = document.getElementById('ignored-systems-container');
+        ignoredSystemsContainer.innerHTML = '';
+        ignoredSystemsData.forEach(system => {
+            const tag = document.createElement('div');
+            tag.className = 'ignored-system-tag';
+            tag.style.backgroundColor = getSecurityColor(system.security);
+            tag.textContent = `${system.name} (${system.security.toFixed(1)})`;
+            const removeIcon = document.createElement('img');
+            removeIcon.className = 'remove-icon';
+            removeIcon.src = 'cross.png';
+            removeIcon.addEventListener('click', () => unIgnoreSystem(system.id));
+            tag.prepend(removeIcon);
+
+            const sec = Math.round(system.security * 10) / 10;
+            if (sec >= 0.5) {
+                tag.style.color = 'black';
+                tag.style.textShadow = 'none';
+            } else {
+                tag.style.color = 'white';
+                tag.style.textShadow = '0 1px 2px rgba(0,0,0,0.5)';
+            }
+
+            ignoredSystemsContainer.appendChild(tag);
+        });
+    }
+}
 
 const getSecurityColor = (security) => {
     const sec = Math.round(security * 10) / 10;
@@ -60,8 +119,8 @@ const parseBookmarks = (input) => {
                 console.log(`Skipping old bookmark sig ${sig}`);
             } else {
                 if (toSystem) {
-                    const from = Data.systems.find(o => o.name.toLowerCase() === fromSystem.toLowerCase()).id;
-                    const to = Data.systems.find(o => o.name.toLowerCase() === toSystem.toLowerCase()).id;
+                    const from = Data.systems.find(o => o.name.toLowerCase() === fromSystem.toLowerCase())?.id;
+                    const to = Data.systems.find(o => o.name.toLowerCase() === toSystem.toLowerCase())?.id;
                     if (from && to) {
                         let existingConn = bookmarkConnections.find(conn => from === conn.from && to === conn.to);
                         if (existingConn) {
@@ -83,36 +142,53 @@ const parseBookmarks = (input) => {
 function generateRoute() {
     const from = document.getElementById("from").value;
     const to = document.getElementById("to").value;
-    const fromId = Data.systems.find(o => o.name.toLowerCase() === from.toLowerCase()).id;
-    const toId = Data.systems.find(o => o.name.toLowerCase() === to.toLowerCase()).id;
+    const fromId = Data.systems.find(o => o.name.toLowerCase() === from.toLowerCase())?.id;
+    const toId = Data.systems.find(o => o.name.toLowerCase() === to.toLowerCase())?.id;
 
     if (toId && fromId) {
-        const plainRoute = findShortestRoute([...Data.connections, ...bookmarkConnections, ...eveScoutConnections], fromId, toId);
+        const plainRoute = findShortestRoute([...Data.connections, ...bookmarkConnections, ...eveScoutConnections], fromId, toId, ignoredSystemsData);
         const routeData = plainRoute.map(routeElem => {
             const system = Data.systems.find(o => o.id === routeElem.id);
-            return {id: routeElem.id, name: system.name, security: system.security, sig: routeElem.sig, source: routeElem.source};
+            return {
+                id: routeElem.id,
+                name: system.name,
+                security: system.security,
+                sig: routeElem.sig,
+                source: routeElem.source
+            };
         });
         const barsContainer = document.getElementById('bars-container');
         const jumpsLabel = document.getElementById('jumps');
         barsContainer.innerHTML = '';
         const barHeight = 30;
         const barGap = 4;
-        jumpsLabel.innerText = `Jumps: ${routeData.length}`;
+        jumpsLabel.innerText = `Jumps: ${routeData.length > 0 ? routeData.length - 1 : 0}`;
 
         routeData.forEach((system, index) => {
             const bar = document.createElement('div');
             bar.className = 'bar';
             bar.style.backgroundColor = getSecurityColor(system.security);
-            bar.textContent = `${system.name} (${system.security.toFixed(1)})`;
-            barsContainer.appendChild(bar);
 
-            if (Math.round(system.security * 10) / 10 >= 0.5) {
+            const removeIcon = document.createElement('img');
+            removeIcon.className = 'remove-icon';
+            removeIcon.src = 'cross.png';
+            removeIcon.addEventListener('click', () => ignoreSystem(system.id));
+
+            const barText = document.createElement('span');
+            barText.textContent = `${system.name} (${system.security.toFixed(1)})`;
+
+            bar.appendChild(removeIcon);
+            bar.appendChild(barText);
+
+            const sec = Math.round(system.security * 10) / 10;
+            if (sec >= 0.5) {
                 bar.style.color = 'black';
                 bar.style.textShadow = 'none';
             } else {
                 bar.style.color = 'white';
                 bar.style.textShadow = '0 1px 2px rgba(0,0,0,0.5)';
             }
+            barsContainer.appendChild(bar);
 
             if (system.sig) {
                 const label = document.createElement('div');
@@ -137,6 +213,20 @@ function generateRoute() {
         });
     }
 }
+
+const ignoreSystem = (id) => {
+    const ignoredSystem = Data.systems.find(s => s.id === id);
+    ignoredSystemsData.push(ignoredSystem);
+    generateRoute();
+    updateIgnoredSystems();
+};
+
+const unIgnoreSystem = (id) => {
+    const ignoredSystemIndex = ignoredSystemsData.findIndex(s => s.id === id);
+    ignoredSystemsData.splice(ignoredSystemIndex, 1);
+    generateRoute();
+    updateIgnoredSystems();
+};
 
 const loadEveScoutBookmarks = async () => {
     eveScoutConnections = [];
@@ -185,16 +275,19 @@ const loadEveScoutBookmarks = async () => {
     scoutStatusLabel.innerText = scoutText;
 }
 
-const findShortestRoute = (conns, from, to) => {
+const findShortestRoute = (conns, from, to, ignored) => {
     const graph = {};
     for (const edge of conns) {
-        const { from, to, sig, source } = edge;
-        if (!graph[from]) {
-            graph[from] = [];
+        const {from, to, sig, source} = edge;
+        const isIgnored = !!ignoredSystemsData.find(s => s.id === from || s.id === to);
+        if (!isIgnored) {
+            if (!graph[from]) {
+                graph[from] = [];
+            }
+            graph[from].push({id: to, sig: sig, source: source});
         }
-        graph[from].push({ id: to, sig: sig, source: source });
     }
-    const queue = [[{ id: from }]];
+    const queue = [[{id: from}]];
     const visited = new Set();
     while (queue.length > 0) {
         const path = queue.shift();
@@ -210,9 +303,9 @@ const findShortestRoute = (conns, from, to) => {
             for (const neighbor of neighbors) {
                 if (!visited.has(neighbor.id)) {
                     const newPath = path.slice(0, -1);
-                    const lastNodeWithSig = { ...lastPathObject, sig: neighbor.sig, source: neighbor.source };
+                    const lastNodeWithSig = {...lastPathObject, sig: neighbor.sig, source: neighbor.source};
                     newPath.push(lastNodeWithSig);
-                    newPath.push({ id: neighbor.id });
+                    newPath.push({id: neighbor.id});
                     queue.push(newPath);
                 }
             }

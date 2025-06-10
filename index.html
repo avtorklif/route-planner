@@ -20,11 +20,12 @@
         <p class="status-text" id="status-text">Eve Scout: loaded</p>
 
         <div class="controls-area">
-            <div class="input-grid">
+            <div class="input-row">
                 <div class="input-group">
                     <label for="from">From</label>
                     <input type="text" id="from" name="from">
                 </div>
+                <img src="swap.png" class="swap-button" id="swap-button" alt="Swap Icon">
                 <div class="input-group">
                     <label for="to">To</label>
                     <input type="text" id="to" name="to">
@@ -33,7 +34,13 @@
             <button id="build-route" class="build-button">Build</button>
         </div>
 
-        <p class="jumps-label" id="jumps">Jumps: 17</p>
+        <div class="ignored-systems-section" id="ignored-systems-section">
+            <h3>Ignored systems</h3>
+            <div id="ignored-systems-container" class="ignored-systems-container">
+            </div>
+        </div>
+
+        <p class="jumps-label" id="jumps">Jumps: 0</p>
 
         <div id="bars-container" class="bars-area">
         </div>

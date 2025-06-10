@@ -2,11 +2,10 @@ body, html {
     height: 100%;
     margin: 0;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    background-color: #111827; /* Dark background */
-    color: #d1d5db; /* Light gray text */
+    background-color: #111827;
+    color: #d1d5db;
 }
 
-/* Main Layout Containers */
 .main-container {
     display: flex;
     height: 100vh;
@@ -17,7 +16,7 @@ body, html {
     padding: 24px;
     display: flex;
     flex-direction: column;
-    background-color: #1f2937; /* Slightly lighter dark panel */
+    background-color: #1f2937;
     overflow: hidden;
 }
 
@@ -26,13 +25,12 @@ body, html {
     flex-shrink: 0;
     padding: 24px;
     box-sizing: border-box;
-    background-color: #111827; /* Dark panel */
-    border-left: 1px solid #374151; /* Darker border */
+    background-color: #111827;
+    border-left: 1px solid #374151;
     display: flex;
     flex-direction: column;
 }
 
-/* Typography and Status */
 .header-container {
     display: flex;
     align-items: center;
@@ -44,7 +42,14 @@ h1 {
     font-size: 1.5rem;
     font-weight: 700;
     margin: 0;
-    color: #f9fafb; /* Off-white */
+    color: #f9fafb;
+}
+
+h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0 0 8px 0;
+    color: #f9fafb;
 }
 
 .logo {
@@ -56,24 +61,23 @@ h2 {
     font-size: 1.125rem;
     font-weight: 600;
     margin: 0 0 16px 0;
-    color: #f9fafb; /* Off-white */
+    color: #f9fafb;
 }
 
 .status-text {
     font-size: 0.75rem;
-    color: #9ca3af; /* Mid-light gray */
+    color: #9ca3af;
     margin-bottom: 24px;
 }
 
-/* Input and Button Area */
 .controls-area {
     margin-bottom: 16px;
 }
 
-.input-grid {
-    display: grid;
-    grid-template-columns: auto auto;
-    gap: 16px;
+.input-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 12px;
     margin-bottom: 16px;
     justify-content: start;
 }
@@ -102,6 +106,30 @@ h2 {
     box-shadow: 0 0 0 1px #60a5fa;
 }
 
+.swap-button {
+    height: 40px;
+    width: 40px;
+    padding: 8px;
+    box-sizing: border-box;
+    background-color: #374151;
+    border: 1px solid #4b5563;
+    border-radius: 6px;
+    color: #d1d5db;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s;
+}
+.swap-button:hover {
+    background-color: #4b5563;
+}
+.swap-button img {
+    width: 100%;
+    height: 100%;
+    filter: invert(1);
+}
+
 .build-button {
     padding: 10px 24px;
     font-size: 1rem;
@@ -119,13 +147,13 @@ h2 {
 }
 
 .jumps-label {
-    margin-bottom: 16px;
+    margin-top: 16px;
+    margin-bottom: 8px;
     font-size: 0.875rem;
     font-weight: 600;
-    color: #d1d5db; /* Light gray */
+    color: #d1d5db;
 }
 
-/* Bar and Label Styling */
 .bars-area {
     flex-grow: 1;
     position: relative;
@@ -133,18 +161,42 @@ h2 {
     padding-right: 90px;
 }
 
-.bar {
-    width: 100%;
+.bar, .ignored-system-tag {
     height: 30px;
     margin-bottom: 4px;
     border-radius: 4px;
     display: flex;
     align-items: center;
-    justify-content: center;
-    color: black;
+    gap: 8px;
+    padding: 0 12px;
     font-weight: 600;
     font-size: 0.875rem;
-    text-shadow: 0 1px 1px rgba(255,255,255,0.5);
+}
+
+.bar {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.ignored-system-tag {
+    width: fit-content;
+}
+
+.remove-icon {
+    height: 14px;
+    width: 14px;
+    cursor: pointer;
+    position: relative;
+    top: 1px;
+    opacity: 0;
+}
+
+.bar:hover .remove-icon {
+    opacity: 1;
+}
+
+.ignored-system-tag .remove-icon {
+    opacity: 1;
 }
 
 .bar-label {
@@ -153,16 +205,25 @@ h2 {
     width: 80px;
     font-family: monospace;
     font-size: 12px;
-    color: #9ca3af; /* Mid-light gray */
+    color: #9ca3af;
     transform: translateY(-50%);
     text-align: center;
 }
 .source-text {
     font-size: 10px;
-    color: #6b7280; /* Mid-dark gray */
+    color: #6b7280;
 }
 
-/* Right Panel Content */
+.ignored-systems-section {
+    margin-bottom: 16px;
+}
+
+.ignored-systems-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
 .submit-button {
     padding: 8px 16px;
     font-size: 0.875rem;
