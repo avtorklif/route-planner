@@ -75,15 +75,15 @@ const updateIgnoredSystems = () => {
             const tag = document.createElement('div');
             tag.className = 'ignored-system-tag';
             tag.style.backgroundColor = getSecurityColor(system.security);
-            tag.textContent = `${system.name} (${system.security.toFixed(1)})`;
+            tag.textContent = `${system.name} (${roundSystemSecurity(system.security)})`;
             const removeIcon = document.createElement('img');
             removeIcon.className = 'remove-icon';
             removeIcon.src = 'cross.png';
             removeIcon.addEventListener('click', () => unIgnoreSystem(system.id));
             tag.prepend(removeIcon);
 
-            const sec = Math.round(system.security * 10) / 10;
-            if (sec >= 0.5) {
+            const sec = roundSystemSecurity(system.security);
+            if (sec >= 0.5 && sec <= 0.8) {
                 tag.style.color = 'black';
                 tag.style.textShadow = 'none';
             } else {
@@ -94,10 +94,10 @@ const updateIgnoredSystems = () => {
             ignoredSystemsContainer.appendChild(tag);
         });
     }
-}
+};
 
 const getSecurityColor = (security) => {
-    const sec = Math.round(security * 10) / 10;
+    const sec = roundSystemSecurity(security);
     if (sec >= 1.0) return '#2e74dd';
     if (sec >= 0.9) return '#369df6';
     if (sec >= 0.8) return '#4acff1';
@@ -189,13 +189,13 @@ function generateRoute() {
             removeIcon.addEventListener('click', () => ignoreSystem(system.id));
 
             const barText = document.createElement('span');
-            barText.textContent = `${system.name} (${system.security.toFixed(1)})`;
+            barText.textContent = `${system.name} (${roundSystemSecurity(system.security)})`;
 
             bar.appendChild(removeIcon);
             bar.appendChild(barText);
 
-            const sec = Math.round(system.security * 10) / 10;
-            if (sec >= 0.5) {
+            const sec = roundSystemSecurity(system.security);
+            if (sec >= 0.5 && sec <= 0.8) {
                 bar.style.color = 'black';
                 bar.style.textShadow = 'none';
             } else {
@@ -226,7 +226,7 @@ function generateRoute() {
             }
         });
     }
-}
+};
 
 const ignoreSystem = (id) => {
     const ignoredSystem = Data.systems.find(s => s.id === id);
@@ -287,7 +287,7 @@ const loadEveScoutBookmarks = async () => {
         scoutText += "error";
     }
     scoutStatusLabel.innerText = scoutText;
-}
+};
 
 const showParsedBookmarks = (data) => {
     const tableBody = document.querySelector('.signatures-table tbody');
@@ -311,7 +311,7 @@ const showParsedBookmarks = (data) => {
         fromDot.className = 'security-dot';
         fromDot.style.backgroundColor = getSecurityColor(item.from.security);
         const fromText = document.createElement('span');
-        fromText.textContent = `${item.from.name} (${item.from.security.toFixed(1)})`;
+        fromText.textContent = `${item.from.name} (${roundSystemSecurity(item.from.security)})`;
         fromContent.appendChild(fromDot);
         fromContent.appendChild(fromText);
         fromCell.appendChild(fromContent);
@@ -324,7 +324,7 @@ const showParsedBookmarks = (data) => {
         toDot.className = 'security-dot';
         toDot.style.backgroundColor = getSecurityColor(item.to.security);
         const toText = document.createElement('span');
-        toText.textContent = `${item.to.name} (${item.to.security.toFixed(1)})`;
+        toText.textContent = `${item.to.name} (${roundSystemSecurity(item.to.security)})`;
         toContent.appendChild(toDot);
         toContent.appendChild(toText);
         toCell.appendChild(toContent);
@@ -349,6 +349,14 @@ const showBookmarksInput = () => {
     submitBookmarksButton.classList.remove('hidden');
     tableContainer.classList.add('hidden');
     editBookmarksButton.classList.add('hidden');
+};
+
+const roundSystemSecurity = (security) => {
+    if (security > 0 && security < 0.05) {
+        return 0.1;
+    } else {
+        return security.toFixed(1);
+    }
 };
 
 const findShortestRoute = (conns, from, to, ignored) => {
