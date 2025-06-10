@@ -48,11 +48,27 @@
 
     <div class="right-panel">
         <div class="bookmarks-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-            <h2 style="margin: 0;">Boomkars</h2>
-            <button id="submit-bookmarks" class="submit-button">Submit</button>
+            <h2>Bookmarks</h2>
+            <div>
+                <button id="submit-bookmarks" class="submit-button">Submit</button>
+                <button id="edit-bookmarks" class="edit-button hidden">Edit</button>
+            </div>
         </div>
         <div class="textarea-container">
             <textarea id="bookmarks-input" placeholder="Enter bookmarks here..."></textarea>
+        </div>
+        <div id="table-container" class="table-container hidden">
+            <table class="signatures-table">
+                <thead>
+                <tr>
+                    <th>Signature</th>
+                    <th>From</th>
+                    <th>To</th>
+                </tr>
+                </thead>
+                <tbody>
+                </tbody>
+            </table>
         </div>
     </div>
 </div>

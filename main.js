@@ -18,10 +18,24 @@ const initialize = async () => {
     const buildButton = document.getElementById('build-route');
     buildButton.addEventListener('click', generateRoute);
     const submitBookmarksButton = document.getElementById('submit-bookmarks');
+    const editBookmarksButton = document.getElementById('edit-bookmarks');
     submitBookmarksButton.addEventListener('click', () => {
         const bookmarksText = document.getElementById('bookmarks-input').value;
         parseBookmarks(bookmarksText);
+        const bookmarksData = bookmarkConnections.map(b => {
+            return {
+                sig: b.sig,
+                from: Data.systems.find(o => o.id === b.from),
+                to: Data.systems.find(o => o.id === b.to)
+            }
+        })
+        if (bookmarksData.length > 0) {
+            showParsedBookmarks(bookmarksData);
+        }
+        generateRoute();
     });
+
+    editBookmarksButton.addEventListener('click', showBookmarksInput);
 
     const swapButton = document.getElementById('swap-button');
     const fromInput = document.getElementById('from');
@@ -274,6 +288,68 @@ const loadEveScoutBookmarks = async () => {
     }
     scoutStatusLabel.innerText = scoutText;
 }
+
+const showParsedBookmarks = (data) => {
+    const tableBody = document.querySelector('.signatures-table tbody');
+    tableBody.innerHTML = '';
+
+    const bookmarksInputContainer = document.querySelector('.textarea-container');
+    const submitBookmarksButton = document.getElementById('submit-bookmarks');
+    const tableContainer = document.getElementById('table-container');
+    const editBookmarksButton = document.getElementById('edit-bookmarks');
+
+    data.forEach(item => {
+        const row = document.createElement('tr');
+        const sigCell = document.createElement('td');
+        sigCell.textContent = item.sig;
+        row.appendChild(sigCell);
+
+        const fromCell = document.createElement('td');
+        const fromContent = document.createElement('div');
+        fromContent.className = 'cell-content';
+        const fromDot = document.createElement('div');
+        fromDot.className = 'security-dot';
+        fromDot.style.backgroundColor = getSecurityColor(item.from.security);
+        const fromText = document.createElement('span');
+        fromText.textContent = `${item.from.name} (${item.from.security.toFixed(1)})`;
+        fromContent.appendChild(fromDot);
+        fromContent.appendChild(fromText);
+        fromCell.appendChild(fromContent);
+        row.appendChild(fromCell);
+
+        const toCell = document.createElement('td');
+        const toContent = document.createElement('div');
+        toContent.className = 'cell-content';
+        const toDot = document.createElement('div');
+        toDot.className = 'security-dot';
+        toDot.style.backgroundColor = getSecurityColor(item.to.security);
+        const toText = document.createElement('span');
+        toText.textContent = `${item.to.name} (${item.to.security.toFixed(1)})`;
+        toContent.appendChild(toDot);
+        toContent.appendChild(toText);
+        toCell.appendChild(toContent);
+        row.appendChild(toCell);
+
+        tableBody.appendChild(row);
+    });
+
+    bookmarksInputContainer.classList.add('hidden');
+    submitBookmarksButton.classList.add('hidden');
+    tableContainer.classList.remove('hidden');
+    editBookmarksButton.classList.remove('hidden');
+};
+
+const showBookmarksInput = () => {
+    const bookmarksInputContainer = document.querySelector('.textarea-container');
+    const tableContainer = document.getElementById('table-container');
+    const submitBookmarksButton = document.getElementById('submit-bookmarks');
+    const editBookmarksButton = document.getElementById('edit-bookmarks');
+
+    bookmarksInputContainer.classList.remove('hidden');
+    submitBookmarksButton.classList.remove('hidden');
+    tableContainer.classList.add('hidden');
+    editBookmarksButton.classList.add('hidden');
+};
 
 const findShortestRoute = (conns, from, to, ignored) => {
     const graph = {};
