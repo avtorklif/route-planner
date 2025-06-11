@@ -21,7 +21,7 @@ body, html {
 }
 
 .right-panel {
-    width: 800px;
+    width: 33%;
     flex-shrink: 0;
     padding: 24px;
     box-sizing: border-box;

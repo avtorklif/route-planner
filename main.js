@@ -11,16 +11,21 @@ let bookmarkConnections = [];
 let eveScoutConnections = [];
 const ignoredSystemsData = [];
 let preferSafer = false;
+let systemsDict = {};
 
 const initialize = async () => {
     systemNames = Data.systems.map(d => d.name).sort((a, b) => b.length - a.length);
+    systemsDict = Data.systems.reduce((acc, obj) => {
+        acc[obj.id] = obj;
+        return acc;
+    }, {});
     await loadEveScoutBookmarks();
     const fromInput = document.getElementById('from');
     const toInput = document.getElementById('to');
     const awesompleteConfig = {
         list: systemNames,
         maxItems: 3,
-        filter: function (text, input) {
+        filter: (text, input) => {
             return text.toLowerCase().startsWith(input.toLowerCase());
         }
     };
@@ -28,13 +33,13 @@ const initialize = async () => {
     const toAwesomplete = new Awesomplete(toInput, awesompleteConfig);
 
     document.querySelectorAll('input[name="preference"]').forEach((elem) => {
-        elem.addEventListener("change", function(event) {
+        elem.addEventListener("change", (event) => {
             preferSafer = event.target.value === 'safer';
             generateRoute();
         });
     });
 
-    fromInput.addEventListener('keydown', function (event) {
+    fromInput.addEventListener('keydown', (event) => {
         if (event.key === 'Tab' && fromAwesomplete.opened && fromAwesomplete.ul.children.length > 0) {
             event.preventDefault();
             fromAwesomplete.goto(0);
@@ -42,7 +47,7 @@ const initialize = async () => {
         }
     });
 
-    toInput.addEventListener('keydown', function (event) {
+    toInput.addEventListener('keydown', (event)=> {
         if (event.key === 'Tab' && toAwesomplete.opened && toAwesomplete.ul.children.length > 0) {
             event.preventDefault();
             toAwesomplete.goto(0);
@@ -60,8 +65,8 @@ const initialize = async () => {
         const bookmarksData = bookmarkConnections.map(b => {
             return {
                 sig: b.sig,
-                from: Data.systems.find(o => o.id === b.from),
-                to: Data.systems.find(o => o.id === b.to)
+                from: systemsDict[b.from],
+                to: systemsDict[b.to]
             }
         })
         if (bookmarksData.length > 0) {
@@ -79,14 +84,14 @@ const initialize = async () => {
         toInput.value = fromValue;
     });
 
-    fromInput.addEventListener("keypress", function (event) {
+    fromInput.addEventListener("keypress", (event) => {
         if (event.key === "Enter") {
             event.preventDefault();
             generateRoute();
         }
     });
 
-    toInput.addEventListener("keypress", function (event) {
+    toInput.addEventListener("keypress", (event) => {
         if (event.key === "Enter") {
             event.preventDefault();
             generateRoute();
@@ -170,14 +175,15 @@ const parseBookmarks = (input) => {
                     const to = Data.systems.find(o => o.name.toLowerCase() === toSystem.toLowerCase())?.id;
                     if (from && to) {
                         let existingConn = bookmarkConnections.find(conn => from === conn.from && to === conn.to);
+                        const age = (now - creationDate) / 1000 / 60;
                         if (existingConn) {
                             existingConn.sig = sig;
                         } else {
-                            bookmarkConnections.push({from: from, to: to, sig: sig, source: 'LSH'});
+                            bookmarkConnections.push({from: from, to: to, sig: sig, source: 'LSH', age: age});
                         }
                         existingConn = bookmarkConnections.find(conn => from === conn.to && to === conn.from);
                         if (!existingConn) {
-                            bookmarkConnections.push({from: to, to: from, sig: "WH (???)", source: 'LSH'});
+                            bookmarkConnections.push({from: to, to: from, sig: "WH", source: 'LSH', age: age});
                         }
                     }
                 }
@@ -186,7 +192,9 @@ const parseBookmarks = (input) => {
     })
 };
 
-function generateRoute() {
+
+
+const generateRoute = () => {
     const from = document.getElementById("from").value;
     const to = document.getElementById("to").value;
     const fromId = Data.systems.find(o => o.name.toLowerCase() === from.toLowerCase())?.id;
@@ -194,17 +202,18 @@ function generateRoute() {
 
     if (toId && fromId) {
         let allConnections = [...Data.connections, ...bookmarkConnections, ...eveScoutConnections].map(c => {
-            return {...c, from: Data.systems.find(s => s.id === c.from), to: Data.systems.find(s => s.id === c.to)}
+            return {...c, from: systemsDict[c.from], to: systemsDict[c.to]}
         })
         const plainRoute = findShortestRoute(allConnections, fromId, toId, ignoredSystemsData, preferSafer);
         const routeData = plainRoute.map(routeElem => {
-            const system = Data.systems.find(o => o.id === routeElem.id);
+            const system = systemsDict[routeElem.id];
             return {
                 id: routeElem.id,
                 name: system.name,
                 security: system.security,
                 sig: routeElem.sig,
-                source: routeElem.source
+                source: routeElem.source,
+                age: routeElem.age
             };
         });
         const barsContainer = document.getElementById('bars-container');
@@ -248,11 +257,11 @@ function generateRoute() {
                 sigText.textContent = system.sig;
                 label.appendChild(sigText);
 
-                if (system.source) {
-                    const sourceText = document.createElement('div');
-                    sourceText.className = 'source-text';
-                    sourceText.textContent = `(${system.source})`;
-                    label.appendChild(sourceText);
+                if (system.age) {
+                    const ageText = document.createElement('div');
+                    ageText.className = 'source-text';
+                    ageText.textContent = `${formatAge(system.age)}`;
+                    label.appendChild(ageText);
                 }
 
                 const yPos = (index * barHeight) + (index * barGap) + barHeight + (barGap / 2);
@@ -265,14 +274,14 @@ function generateRoute() {
 };
 
 const ignoreSystem = (id) => {
-    const ignoredSystem = Data.systems.find(s => s.id === id);
+    const ignoredSystem = systemsDict[id];
     ignoredSystemsData.push(ignoredSystem);
     generateRoute();
     updateIgnoredSystems();
 };
 
 const unIgnoreSystem = (id) => {
-    const ignoredSystemIndex = ignoredSystemsData.findIndex(s => s.id === id);
+    const ignoredSystemIndex = systemsDict[id];
     ignoredSystemsData.splice(ignoredSystemIndex, 1);
     generateRoute();
     updateIgnoredSystems();
@@ -292,6 +301,7 @@ const loadEveScoutBookmarks = async () => {
         respJson = await response.json();
 
         scoutText += "ok";
+        const now = Date.now();
         respJson.forEach(sig => {
             if (sig.remaining_hours > 0) {
                 let existingConn = eveScoutConnections.find(conn => sig.in_system_id === conn.from && sig.out_system_id === conn.to);
@@ -302,7 +312,8 @@ const loadEveScoutBookmarks = async () => {
                         from: sig.in_system_id,
                         to: sig.out_system_id,
                         sig: sig.in_signature,
-                        source: 'EVE Scout'
+                        source: 'EVE Scout',
+                        age: (now - Date.parse(sig.created_at)) / 1000 / 60
                     });
                 }
                 existingConn = eveScoutConnections.find(conn => sig.in_system_id === conn.to && sig.out_system_id === conn.from);
@@ -310,8 +321,9 @@ const loadEveScoutBookmarks = async () => {
                     eveScoutConnections.push({
                         from: sig.out_system_id,
                         to: sig.in_system_id,
-                        sig: 'WH (???)',
-                        source: 'EVE Scout'
+                        sig: 'WH',
+                        source: 'EVE Scout',
+                        age: (now - Date.parse(sig.created_at)) / 1000 / 60
                     });
                 }
             } else {
@@ -395,14 +407,16 @@ const roundSystemSecurity = (security) => {
     }
 };
 
+const formatAge = (ageMinutes) => `${Math.floor(ageMinutes / 60)}h${Math.floor(ageMinutes % 60)}m`
+
 const findShortestRoute = (conns, from, to, ignored, preferSafer) => {
     if (!preferSafer) {
         const graph = {};
         for (const edge of conns) {
-            const { from: fromObj, to: toObj, sig, source } = edge;
+            const { from: fromObj, to: toObj, sig, source, age } = edge;
             if (ignored.find(s => s.id === fromObj.id || s.id === toObj.id)) continue;
             if (!graph[fromObj.id]) graph[fromObj.id] = [];
-            graph[fromObj.id].push({ id: toObj.id, sig, source });
+            graph[fromObj.id].push({ id: toObj.id, sig, source, age });
         }
         const queue = [[{ id: from }]];
         const visited = new Set();
@@ -417,8 +431,8 @@ const findShortestRoute = (conns, from, to, ignored, preferSafer) => {
             for (const neighbour of neighbours) {
                 if (!visited.has(neighbour.id)) {
                     const newPath = path.slice(0, -1);
-                    const lastNodeWithSig = { ...lastPathObject, sig: neighbour.sig, source: neighbour.source };
-                    newPath.push(lastNodeWithSig);
+                    const lastNode = { ...lastPathObject, sig: neighbour.sig, age: neighbour.age, source: neighbour.source };
+                    newPath.push(lastNode);
                     newPath.push({ id: neighbour.id });
                     queue.push(newPath);
                 }
@@ -430,12 +444,12 @@ const findShortestRoute = (conns, from, to, ignored, preferSafer) => {
     const graph = {};
     const nodeInfo = {};
     for (const edge of conns) {
-        const { from: fromObj, to: toObj, sig, source } = edge;
+        const { from: fromObj, to: toObj, sig, age, source } = edge;
         nodeInfo[fromObj.id] = { security: fromObj.security };
         nodeInfo[toObj.id] = { security: toObj.security };
         if (ignored.find(s => s.id === fromObj.id || s.id === toObj.id)) continue;
         if (!graph[fromObj.id]) graph[fromObj.id] = [];
-        graph[fromObj.id].push({ id: toObj.id, sig, source });
+        graph[fromObj.id].push({ id: toObj.id, sig, age, source });
     }
     const pq = [{ path: [{ id: from }], cost: 0 }];
     const costs = new Map();
@@ -460,15 +474,15 @@ const findShortestRoute = (conns, from, to, ignored, preferSafer) => {
             return path;
         }
         const neighbours = graph[currentNodeId] || [];
-        const isCurrentNodeSafe = nodeInfo[currentNodeId] && parseFloat(nodeInfo[currentNodeId].security.toFixed(1)) >= 0.5;
+        const isCurrentNodeSafe = nodeInfo[currentNodeId] && nodeInfo[currentNodeId].security.toFixed(1) >= 0.5;
         const hopCost = 1 + (isCurrentNodeSafe ? 0 : safetyWeight);
         for (const neighbour of neighbours) {
             const newCost = currentCost + hopCost;
             if (!costs.has(neighbour.id) || newCost < costs.get(neighbour.id)) {
                 costs.set(neighbour.id, newCost);
                 const newPath = path.slice(0, -1);
-                const lastNodeWithSig = { ...lastPathObject, sig: neighbour.sig, source: neighbour.source };
-                newPath.push(lastNodeWithSig);
+                const lastNode = { ...lastPathObject, sig: neighbour.sig, age: neighbour.age, source: neighbour.source };
+                newPath.push(lastNode);
                 newPath.push({ id: neighbour.id });
                 pq.push({ path: newPath, cost: newCost });
             }
