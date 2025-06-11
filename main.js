@@ -140,7 +140,7 @@ const parseBookmarks = (input) => {
     bookmarkConnections = [];
     input.split('\n').map((line) => line.split('\t')).forEach(bookmark => {
         const bookName = bookmark[0];
-        const fromSystem = bookmark[3];
+        const fromSystem = bookmark[3]?.replace("*", "");
         const sigRegex = /\b[A-Z]{3}-\d{3}\b/;
         const match = bookName.match(sigRegex);
         const now = Date.now();
