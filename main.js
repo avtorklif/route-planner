@@ -10,6 +10,7 @@ let systemNames = [];
 let bookmarkConnections = [];
 let eveScoutConnections = [];
 const ignoredSystemsData = [];
+let preferSafer = false;
 
 const initialize = async () => {
     systemNames = Data.systems.map(d => d.name).sort((a, b) => b.length - a.length);
@@ -19,14 +20,21 @@ const initialize = async () => {
     const awesompleteConfig = {
         list: systemNames,
         maxItems: 3,
-        filter: function(text, input) {
+        filter: function (text, input) {
             return text.toLowerCase().startsWith(input.toLowerCase());
         }
     };
     const fromAwesomplete = new Awesomplete(fromInput, awesompleteConfig);
     const toAwesomplete = new Awesomplete(toInput, awesompleteConfig);
 
-    fromInput.addEventListener('keydown', function(event) {
+    document.querySelectorAll('input[name="preference"]').forEach((elem) => {
+        elem.addEventListener("change", function(event) {
+            preferSafer = event.target.value === 'safer';
+            generateRoute();
+        });
+    });
+
+    fromInput.addEventListener('keydown', function (event) {
         if (event.key === 'Tab' && fromAwesomplete.opened && fromAwesomplete.ul.children.length > 0) {
             event.preventDefault();
             fromAwesomplete.goto(0);
@@ -34,7 +42,7 @@ const initialize = async () => {
         }
     });
 
-    toInput.addEventListener('keydown', function(event) {
+    toInput.addEventListener('keydown', function (event) {
         if (event.key === 'Tab' && toAwesomplete.opened && toAwesomplete.ul.children.length > 0) {
             event.preventDefault();
             toAwesomplete.goto(0);
@@ -71,14 +79,14 @@ const initialize = async () => {
         toInput.value = fromValue;
     });
 
-    fromInput.addEventListener("keypress", function(event) {
+    fromInput.addEventListener("keypress", function (event) {
         if (event.key === "Enter") {
             event.preventDefault();
             generateRoute();
         }
     });
 
-    toInput.addEventListener("keypress", function(event) {
+    toInput.addEventListener("keypress", function (event) {
         if (event.key === "Enter") {
             event.preventDefault();
             generateRoute();
@@ -185,7 +193,10 @@ function generateRoute() {
     const toId = Data.systems.find(o => o.name.toLowerCase() === to.toLowerCase())?.id;
 
     if (toId && fromId) {
-        const plainRoute = findShortestRoute([...Data.connections, ...bookmarkConnections, ...eveScoutConnections], fromId, toId, ignoredSystemsData);
+        let allConnections = [...Data.connections, ...bookmarkConnections, ...eveScoutConnections].map(c => {
+            return {...c, from: Data.systems.find(s => s.id === c.from), to: Data.systems.find(s => s.id === c.to)}
+        })
+        const plainRoute = findShortestRoute(allConnections, fromId, toId, ignoredSystemsData, preferSafer);
         const routeData = plainRoute.map(routeElem => {
             const system = Data.systems.find(o => o.id === routeElem.id);
             return {
@@ -384,42 +395,84 @@ const roundSystemSecurity = (security) => {
     }
 };
 
-const findShortestRoute = (conns, from, to, ignored) => {
-    const graph = {};
-    for (const edge of conns) {
-        const {from, to, sig, source} = edge;
-        const isIgnored = !!ignoredSystemsData.find(s => s.id === from || s.id === to);
-        if (!isIgnored) {
-            if (!graph[from]) {
-                graph[from] = [];
-            }
-            graph[from].push({id: to, sig: sig, source: source});
+const findShortestRoute = (conns, from, to, ignored, preferSafer) => {
+    if (!preferSafer) {
+        const graph = {};
+        for (const edge of conns) {
+            const { from: fromObj, to: toObj, sig, source } = edge;
+            if (ignored.find(s => s.id === fromObj.id || s.id === toObj.id)) continue;
+            if (!graph[fromObj.id]) graph[fromObj.id] = [];
+            graph[fromObj.id].push({ id: toObj.id, sig, source });
         }
-    }
-    const queue = [[{id: from}]];
-    const visited = new Set();
-    while (queue.length > 0) {
-        const path = queue.shift();
-        const lastPathObject = path[path.length - 1];
-        const currentNodeId = lastPathObject.id;
-        if (currentNodeId === to) {
-            return path;
-        }
-        if (!visited.has(currentNodeId)) {
+        const queue = [[{ id: from }]];
+        const visited = new Set();
+        while (queue.length > 0) {
+            const path = queue.shift();
+            const lastPathObject = path[path.length - 1];
+            const currentNodeId = lastPathObject.id;
+            if (currentNodeId === to) return path;
+            if (visited.has(currentNodeId)) continue;
             visited.add(currentNodeId);
-            const neighbors = graph[currentNodeId] || [];
-
-            for (const neighbor of neighbors) {
-                if (!visited.has(neighbor.id)) {
+            const neighbours = graph[currentNodeId] || [];
+            for (const neighbour of neighbours) {
+                if (!visited.has(neighbour.id)) {
                     const newPath = path.slice(0, -1);
-                    const lastNodeWithSig = {...lastPathObject, sig: neighbor.sig, source: neighbor.source};
+                    const lastNodeWithSig = { ...lastPathObject, sig: neighbour.sig, source: neighbour.source };
                     newPath.push(lastNodeWithSig);
-                    newPath.push({id: neighbor.id});
+                    newPath.push({ id: neighbour.id });
                     queue.push(newPath);
                 }
             }
         }
+        return [];
     }
-
+    const safetyWeight = 1000;
+    const graph = {};
+    const nodeInfo = {};
+    for (const edge of conns) {
+        const { from: fromObj, to: toObj, sig, source } = edge;
+        nodeInfo[fromObj.id] = { security: fromObj.security };
+        nodeInfo[toObj.id] = { security: toObj.security };
+        if (ignored.find(s => s.id === fromObj.id || s.id === toObj.id)) continue;
+        if (!graph[fromObj.id]) graph[fromObj.id] = [];
+        graph[fromObj.id].push({ id: toObj.id, sig, source });
+    }
+    const pq = [{ path: [{ id: from }], cost: 0 }];
+    const costs = new Map();
+    costs.set(from, 0);
+    const getNext = () => {
+        let bestIndex = 0;
+        for (let i = 1; i < pq.length; i++) {
+            if (pq[i].cost < pq[bestIndex].cost) {
+                bestIndex = i;
+            }
+        }
+        return pq.splice(bestIndex, 1)[0];
+    };
+    while (pq.length > 0) {
+        const { path, cost: currentCost } = getNext();
+        const lastPathObject = path[path.length - 1];
+        const currentNodeId = lastPathObject.id;
+        if (currentCost > costs.get(currentNodeId)) {
+            continue;
+        }
+        if (currentNodeId === to) {
+            return path;
+        }
+        const neighbours = graph[currentNodeId] || [];
+        const isCurrentNodeSafe = nodeInfo[currentNodeId] && parseFloat(nodeInfo[currentNodeId].security.toFixed(1)) >= 0.5;
+        const hopCost = 1 + (isCurrentNodeSafe ? 0 : safetyWeight);
+        for (const neighbour of neighbours) {
+            const newCost = currentCost + hopCost;
+            if (!costs.has(neighbour.id) || newCost < costs.get(neighbour.id)) {
+                costs.set(neighbour.id, newCost);
+                const newPath = path.slice(0, -1);
+                const lastNodeWithSig = { ...lastPathObject, sig: neighbour.sig, source: neighbour.source };
+                newPath.push(lastNodeWithSig);
+                newPath.push({ id: neighbour.id });
+                pq.push({ path: newPath, cost: newCost });
+            }
+        }
+    }
     return [];
 };

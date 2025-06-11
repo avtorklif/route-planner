@@ -79,7 +79,7 @@ h2 {
     align-items: flex-end;
     gap: 12px;
     margin-bottom: 16px;
-    justify-content: start;
+    flex-wrap: wrap;
 }
 
 .input-group {
@@ -93,8 +93,9 @@ h2 {
     font-weight: 500;
 }
 
-.input-group input {
+.input-group input[type="text"] {
     width: 200px;
+    height: 40px;
     padding: 8px;
     box-sizing: border-box;
     background-color: #374151;
@@ -104,14 +105,50 @@ h2 {
     color: #f9fafb;
 }
 
-.input-group input:focus {
+.input-group input[type="text"]:focus {
     outline: none;
-    border-color: #60a5fa;
-    box-shadow: 0 0 0 1px #60a5fa;
+    border-color: #9ca3af;
+    box-shadow: 0 0 0 1px #9ca3af;
 }
 
-div.awesomplete {
-    display: block;
+.radio-group {
+    display: flex;
+    gap: 16px;
+    margin-left: 12px;
+    height: 40px;
+    align-items: center;
+}
+.radio-group .radio-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.875rem;
+    cursor: pointer;
+}
+.radio-group input[type="radio"] {
+    display: none;
+}
+.custom-radio {
+    width: 16px;
+    height: 16px;
+    border: 2px solid #4b5563;
+    border-radius: 50%;
+    display: inline-block;
+    position: relative;
+}
+input[type="radio"]:checked + .custom-radio {
+    border-color: #9ca3af;
+}
+input[type="radio"]:checked + .custom-radio::after {
+    content: '';
+    width: 8px;
+    height: 8px;
+    background: #9ca3af;
+    border-radius: 50%;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
 }
 
 div.awesomplete > ul {
@@ -133,12 +170,7 @@ div.awesomplete > ul::before {
 }
 
 div.awesomplete > ul,
-div.awesomplete > ul > li,
-.swap-button,
-.build-button,
-.remove-icon,
-.submit-button,
-.edit-button {
+div.awesomplete > ul > li {
     transition: none !important;
     animation: none !important;
 }
@@ -151,7 +183,6 @@ div.awesomplete > ul > li,
     background-color: #374151;
     border: 1px solid #4b5563;
     border-radius: 6px;
-    color: #d1d5db;
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -161,6 +192,7 @@ div.awesomplete > ul > li,
 .swap-button img {
     width: 100%;
     height: 100%;
+    filter: invert(1);
 }
 
 .build-button {
@@ -217,6 +249,7 @@ div.awesomplete > ul > li,
     position: relative;
     top: 1px;
     opacity: 0;
+    transition: opacity 0.2s ease;
 }
 
 .bar:hover .remove-icon,
@@ -281,8 +314,8 @@ textarea {
 
 textarea:focus {
     outline: none;
-    border-color: #60a5fa;
-    box-shadow: 0 0 0 1px #60a5fa;
+    border-color: #9ca3af;
+    box-shadow: 0 0 0 1px #9ca3af;
 }
 
 .hidden {
