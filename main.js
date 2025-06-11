@@ -14,6 +14,33 @@ const ignoredSystemsData = [];
 const initialize = async () => {
     systemNames = Data.systems.map(d => d.name).sort((a, b) => b.length - a.length);
     await loadEveScoutBookmarks();
+    const fromInput = document.getElementById('from');
+    const toInput = document.getElementById('to');
+    const awesompleteConfig = {
+        list: systemNames,
+        maxItems: 3,
+        filter: function(text, input) {
+            return text.toLowerCase().startsWith(input.toLowerCase());
+        }
+    };
+    const fromAwesomplete = new Awesomplete(fromInput, awesompleteConfig);
+    const toAwesomplete = new Awesomplete(toInput, awesompleteConfig);
+
+    fromInput.addEventListener('keydown', function(event) {
+        if (event.key === 'Tab' && fromAwesomplete.opened && fromAwesomplete.ul.children.length > 0) {
+            event.preventDefault();
+            fromAwesomplete.goto(0);
+            fromAwesomplete.select();
+        }
+    });
+
+    toInput.addEventListener('keydown', function(event) {
+        if (event.key === 'Tab' && toAwesomplete.opened && toAwesomplete.ul.children.length > 0) {
+            event.preventDefault();
+            toAwesomplete.goto(0);
+            toAwesomplete.select();
+        }
+    });
 
     const buildButton = document.getElementById('build-route');
     buildButton.addEventListener('click', generateRoute);
@@ -38,8 +65,6 @@ const initialize = async () => {
     editBookmarksButton.addEventListener('click', showBookmarksInput);
 
     const swapButton = document.getElementById('swap-button');
-    const fromInput = document.getElementById('from');
-    const toInput = document.getElementById('to');
     swapButton.addEventListener('click', () => {
         const fromValue = fromInput.value;
         fromInput.value = toInput.value;
