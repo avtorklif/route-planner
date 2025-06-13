@@ -82,6 +82,7 @@ const initialize = async () => {
         const fromValue = fromInput.value;
         fromInput.value = toInput.value;
         toInput.value = fromValue;
+        generateRoute();
     });
 
     fromInput.addEventListener("keypress", (event) => {
@@ -204,26 +205,15 @@ const generateRoute = () => {
         let allConnections = [...Data.connections, ...bookmarkConnections, ...eveScoutConnections].map(c => {
             return {...c, from: systemsDict[c.from], to: systemsDict[c.to]}
         })
-        const plainRoute = findShortestRoute(allConnections, fromId, toId, ignoredSystemsData, preferSafer);
-        const routeData = plainRoute.map(routeElem => {
-            const system = systemsDict[routeElem.id];
-            return {
-                id: routeElem.id,
-                name: system.name,
-                security: system.security,
-                sig: routeElem.sig,
-                source: routeElem.source,
-                age: routeElem.age
-            };
-        });
+        const route = findShortestRoute(allConnections, fromId, toId, ignoredSystemsData, preferSafer);
         const barsContainer = document.getElementById('bars-container');
         const jumpsLabel = document.getElementById('jumps');
         barsContainer.innerHTML = '';
         const barHeight = 30;
         const barGap = 4;
-        jumpsLabel.innerText = `Jumps: ${routeData.length > 0 ? routeData.length - 1 : 0}`;
+        jumpsLabel.innerText = `Jumps: ${route.length > 0 ? route.length - 1 : 0}`;
 
-        routeData.forEach((system, index) => {
+        route.forEach((system, index) => {
             const bar = document.createElement('div');
             bar.className = 'bar';
             bar.style.backgroundColor = getSecurityColor(system.security);
@@ -269,6 +259,45 @@ const generateRoute = () => {
 
                 barsContainer.appendChild(label);
             }
+        });
+
+        let regionGroups = [];
+        if (route.length > 0) {
+            let currentGroup = [route[0]];
+            for (let i = 1; i < route.length; i++) {
+                if (route[i].region.id === currentGroup[0].region.id) {
+                    currentGroup.push(route[i]);
+                } else {
+                    regionGroups.push(currentGroup);
+                    currentGroup = [route[i]];
+                }
+            }
+            regionGroups.push(currentGroup);
+        }
+        let currentBarIndex = 0;
+        regionGroups.forEach(group => {
+            const groupSize = group.length;
+            const topPosition = Math.round(currentBarIndex * (barHeight + barGap));
+            const groupHeight = (groupSize * barHeight) + ((groupSize - 1) * barGap);
+
+            const visualContainer = document.createElement('div');
+            visualContainer.className = 'region-visual-container';
+            visualContainer.style.top = `${topPosition}px`;
+            visualContainer.style.height = `${groupHeight}px`;
+
+            const regionName = document.createElement('div');
+            regionName.className = 'region-name';
+            regionName.textContent = group[0].region.name;
+
+            const bracket = document.createElement('div');
+            bracket.className = 'region-bracket';
+
+            visualContainer.appendChild(regionName);
+            visualContainer.appendChild(bracket);
+
+            barsContainer.appendChild(visualContainer);
+
+            currentBarIndex += groupSize;
         });
     }
 };
@@ -409,31 +438,35 @@ const roundSystemSecurity = (security) => {
 
 const formatAge = (ageMinutes) => `${Math.floor(ageMinutes / 60)}h${Math.floor(ageMinutes % 60)}m`
 
-const findShortestRoute = (conns, from, to, ignored, preferSafer) => {
+const findShortestRoute = (conns, fromId, toId, ignored, preferSafer) => {
+    const graph = {};
+    const nodeInfo = {}; // Will store the full object for each node
+    for (const edge of conns) {
+        const { from: fromObj, to: toObj, ...edgeProps } = edge;
+        nodeInfo[fromObj.id] = fromObj;
+        nodeInfo[toObj.id] = toObj;
+        if (ignored.find(s => s.id === fromObj.id || s.id === toObj.id)) continue;
+        if (!graph[fromObj.id]) graph[fromObj.id] = [];
+        graph[fromObj.id].push({ id: toObj.id, ...edgeProps });
+    }
     if (!preferSafer) {
-        const graph = {};
-        for (const edge of conns) {
-            const { from: fromObj, to: toObj, sig, source, age } = edge;
-            if (ignored.find(s => s.id === fromObj.id || s.id === toObj.id)) continue;
-            if (!graph[fromObj.id]) graph[fromObj.id] = [];
-            graph[fromObj.id].push({ id: toObj.id, sig, source, age });
-        }
-        const queue = [[{ id: from }]];
+        if (!nodeInfo[fromId]) return [];
+        const queue = [[nodeInfo[fromId]]];
         const visited = new Set();
         while (queue.length > 0) {
             const path = queue.shift();
-            const lastPathObject = path[path.length - 1];
-            const currentNodeId = lastPathObject.id;
-            if (currentNodeId === to) return path;
-            if (visited.has(currentNodeId)) continue;
-            visited.add(currentNodeId);
-            const neighbours = graph[currentNodeId] || [];
+            const lastPathNode = path[path.length - 1];
+            if (lastPathNode.id === toId) return path;
+            if (visited.has(lastPathNode.id)) continue;
+            visited.add(lastPathNode.id);
+            const neighbours = graph[lastPathNode.id] || [];
             for (const neighbour of neighbours) {
                 if (!visited.has(neighbour.id)) {
-                    const newPath = path.slice(0, -1);
-                    const lastNode = { ...lastPathObject, sig: neighbour.sig, age: neighbour.age, source: neighbour.source };
-                    newPath.push(lastNode);
-                    newPath.push({ id: neighbour.id });
+                    const { id: neighbourId, ...edgeData } = neighbour;
+                    // Create the new path by appending the full neighbour node object
+                    // and merging the edge data into the previous node
+                    const lastNodeWithEdgeData = { ...lastPathNode, ...edgeData };
+                    const newPath = [...path.slice(0, -1), lastNodeWithEdgeData, nodeInfo[neighbourId]];
                     queue.push(newPath);
                 }
             }
@@ -441,49 +474,32 @@ const findShortestRoute = (conns, from, to, ignored, preferSafer) => {
         return [];
     }
     const safetyWeight = 1000;
-    const graph = {};
-    const nodeInfo = {};
-    for (const edge of conns) {
-        const { from: fromObj, to: toObj, sig, age, source } = edge;
-        nodeInfo[fromObj.id] = { security: fromObj.security };
-        nodeInfo[toObj.id] = { security: toObj.security };
-        if (ignored.find(s => s.id === fromObj.id || s.id === toObj.id)) continue;
-        if (!graph[fromObj.id]) graph[fromObj.id] = [];
-        graph[fromObj.id].push({ id: toObj.id, sig, age, source });
-    }
-    const pq = [{ path: [{ id: from }], cost: 0 }];
+    if (!nodeInfo[fromId]) return [];
+    const pq = [{ path: [nodeInfo[fromId]], cost: 0 }];
     const costs = new Map();
-    costs.set(from, 0);
+    costs.set(fromId, 0);
     const getNext = () => {
         let bestIndex = 0;
         for (let i = 1; i < pq.length; i++) {
-            if (pq[i].cost < pq[bestIndex].cost) {
-                bestIndex = i;
-            }
+            if (pq[i].cost < pq[bestIndex].cost) bestIndex = i;
         }
         return pq.splice(bestIndex, 1)[0];
     };
     while (pq.length > 0) {
         const { path, cost: currentCost } = getNext();
-        const lastPathObject = path[path.length - 1];
-        const currentNodeId = lastPathObject.id;
-        if (currentCost > costs.get(currentNodeId)) {
-            continue;
-        }
-        if (currentNodeId === to) {
-            return path;
-        }
-        const neighbours = graph[currentNodeId] || [];
-        const isCurrentNodeSafe = nodeInfo[currentNodeId] && nodeInfo[currentNodeId].security.toFixed(1) >= 0.5;
+        const lastPathNode = path[path.length - 1];
+        if (currentCost > costs.get(lastPathNode.id)) continue;
+        if (lastPathNode.id === toId) return path;
+        const neighbours = graph[lastPathNode.id] || [];
+        const isCurrentNodeSafe = parseFloat(lastPathNode.security.toFixed(1)) >= 0.5;
         const hopCost = 1 + (isCurrentNodeSafe ? 0 : safetyWeight);
         for (const neighbour of neighbours) {
             const newCost = currentCost + hopCost;
             if (!costs.has(neighbour.id) || newCost < costs.get(neighbour.id)) {
                 costs.set(neighbour.id, newCost);
-                const newPath = path.slice(0, -1);
-                const lastNode = { ...lastPathObject, sig: neighbour.sig, age: neighbour.age, source: neighbour.source };
-                newPath.push(lastNode);
-                newPath.push({ id: neighbour.id });
+                const { id: neighbourId, ...edgeData } = neighbour;
+                const lastNodeWithEdgeData = { ...lastPathNode, ...edgeData };
+                const newPath = [...path.slice(0, -1), lastNodeWithEdgeData, nodeInfo[neighbourId]];
                 pq.push({ path: newPath, cost: newCost });
             }
         }
