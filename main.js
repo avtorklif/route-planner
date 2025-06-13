@@ -7,6 +7,7 @@ if (!window.Data) {
 }
 
 let systemNames = [];
+let regionNames = [];
 let bookmarkConnections = [];
 let eveScoutConnections = [];
 const ignoredSystemsData = [];
@@ -19,18 +20,26 @@ const initialize = async () => {
         acc[obj.id] = obj;
         return acc;
     }, {});
+    regionNames = Data.regions.map(d => d.name);
     await loadEveScoutBookmarks();
     const fromInput = document.getElementById('from');
     const toInput = document.getElementById('to');
-    const awesompleteConfig = {
+    const awesompleteFromConfig = {
         list: systemNames,
         maxItems: 3,
         filter: (text, input) => {
             return text.toLowerCase().startsWith(input.toLowerCase());
         }
     };
-    const fromAwesomplete = new Awesomplete(fromInput, awesompleteConfig);
-    const toAwesomplete = new Awesomplete(toInput, awesompleteConfig);
+    const awesompleteToConfig = {
+        list: [...systemNames, ...regionNames],
+        maxItems: 3,
+        filter: (text, input) => {
+            return text.toLowerCase().startsWith(input.toLowerCase());
+        }
+    };
+    const fromAwesomplete = new Awesomplete(fromInput, awesompleteFromConfig);
+    const toAwesomplete = new Awesomplete(toInput, awesompleteToConfig);
 
     document.querySelectorAll('input[name="preference"]').forEach((elem) => {
         elem.addEventListener("change", (event) => {
@@ -199,13 +208,25 @@ const generateRoute = () => {
     const from = document.getElementById("from").value;
     const to = document.getElementById("to").value;
     const fromId = Data.systems.find(o => o.name.toLowerCase() === from.toLowerCase())?.id;
-    const toId = Data.systems.find(o => o.name.toLowerCase() === to.toLowerCase())?.id;
+    let toId = Data.systems.find(o => o.name.toLowerCase() === to.toLowerCase())?.id;
+    let isToRegion = false;
+
+    if (!toId) {
+        toId = Data.regions.find(o => o.name.toLowerCase() === to.toLowerCase())?.id;
+        isToRegion = true;
+    }
 
     if (toId && fromId) {
         let allConnections = [...Data.connections, ...bookmarkConnections, ...eveScoutConnections].map(c => {
             return {...c, from: systemsDict[c.from], to: systemsDict[c.to]}
         })
-        const route = findShortestRoute(allConnections, fromId, toId, ignoredSystemsData, preferSafer);
+        let route = [];
+        if (!isToRegion) {
+            route = findShortestRoute(allConnections, fromId, [toId], ignoredSystemsData, preferSafer);
+        } else {
+            const regionSystemIds = Data.systems.filter(s => s.region.id === toId).map(s => s.id);
+            route = findShortestRoute(allConnections, fromId, regionSystemIds, ignoredSystemsData, preferSafer);
+        }
         const barsContainer = document.getElementById('bars-container');
         const jumpsLabel = document.getElementById('jumps');
         barsContainer.innerHTML = '';
@@ -438,7 +459,8 @@ const roundSystemSecurity = (security) => {
 
 const formatAge = (ageMinutes) => `${Math.floor(ageMinutes / 60)}h${Math.floor(ageMinutes % 60)}m`
 
-const findShortestRoute = (conns, fromId, toId, ignored, preferSafer) => {
+const findShortestRoute = (conns, fromId, toIds, ignored, preferSafer) => {
+    const toIdsSet = new Set(toIds);
     const graph = {};
     const nodeInfo = {}; // Will store the full object for each node
     for (const edge of conns) {
@@ -456,15 +478,13 @@ const findShortestRoute = (conns, fromId, toId, ignored, preferSafer) => {
         while (queue.length > 0) {
             const path = queue.shift();
             const lastPathNode = path[path.length - 1];
-            if (lastPathNode.id === toId) return path;
+            if (toIdsSet.has(lastPathNode.id)) return path;
             if (visited.has(lastPathNode.id)) continue;
             visited.add(lastPathNode.id);
             const neighbours = graph[lastPathNode.id] || [];
             for (const neighbour of neighbours) {
                 if (!visited.has(neighbour.id)) {
                     const { id: neighbourId, ...edgeData } = neighbour;
-                    // Create the new path by appending the full neighbour node object
-                    // and merging the edge data into the previous node
                     const lastNodeWithEdgeData = { ...lastPathNode, ...edgeData };
                     const newPath = [...path.slice(0, -1), lastNodeWithEdgeData, nodeInfo[neighbourId]];
                     queue.push(newPath);
@@ -489,7 +509,7 @@ const findShortestRoute = (conns, fromId, toId, ignored, preferSafer) => {
         const { path, cost: currentCost } = getNext();
         const lastPathNode = path[path.length - 1];
         if (currentCost > costs.get(lastPathNode.id)) continue;
-        if (lastPathNode.id === toId) return path;
+        if (toIdsSet.has(lastPathNode.id)) return path;
         const neighbours = graph[lastPathNode.id] || [];
         const isCurrentNodeSafe = parseFloat(lastPathNode.security.toFixed(1)) >= 0.5;
         const hopCost = 1 + (isCurrentNodeSafe ? 0 : safetyWeight);
