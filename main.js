@@ -56,7 +56,7 @@ const initialize = async () => {
         }
     });
 
-    toInput.addEventListener('keydown', (event)=> {
+    toInput.addEventListener('keydown', (event) => {
         if (event.key === 'Tab' && toAwesomplete.opened && toAwesomplete.ul.children.length > 0) {
             event.preventDefault();
             toAwesomplete.goto(0);
@@ -201,7 +201,6 @@ const parseBookmarks = (input) => {
         }
     })
 };
-
 
 
 const generateRoute = () => {
@@ -354,28 +353,20 @@ const loadEveScoutBookmarks = async () => {
         const now = Date.now();
         respJson.forEach(sig => {
             if (sig.remaining_hours > 0) {
-                let existingConn = eveScoutConnections.find(conn => sig.in_system_id === conn.from && sig.out_system_id === conn.to);
-                if (existingConn) {
-                    existingConn.sig = sig.in_signature;
-                } else {
-                    eveScoutConnections.push({
-                        from: sig.in_system_id,
-                        to: sig.out_system_id,
-                        sig: sig.in_signature,
-                        source: 'EVE Scout',
-                        age: (now - Date.parse(sig.created_at)) / 1000 / 60
-                    });
-                }
-                existingConn = eveScoutConnections.find(conn => sig.in_system_id === conn.to && sig.out_system_id === conn.from);
-                if (!existingConn) {
-                    eveScoutConnections.push({
-                        from: sig.out_system_id,
-                        to: sig.in_system_id,
-                        sig: 'WH',
-                        source: 'EVE Scout',
-                        age: (now - Date.parse(sig.created_at)) / 1000 / 60
-                    });
-                }
+                eveScoutConnections.push({
+                    from: sig.in_system_id,
+                    to: sig.out_system_id,
+                    sig: sig.in_signature,
+                    source: 'EVE Scout',
+                    age: (now - Date.parse(sig.created_at)) / 1000 / 60
+                });
+                eveScoutConnections.push({
+                    from: sig.out_system_id,
+                    to: sig.in_system_id,
+                    sig: sig.out_signature,
+                    source: 'EVE Scout',
+                    age: (now - Date.parse(sig.created_at)) / 1000 / 60
+                });
             } else {
                 console.log(`Skipping old Eve Scout sig ${sig.in_signature}`);
             }
@@ -464,12 +455,12 @@ const findShortestRoute = (conns, fromId, toIds, ignored, preferSafer) => {
     const graph = {};
     const nodeInfo = {}; // Will store the full object for each node
     for (const edge of conns) {
-        const { from: fromObj, to: toObj, ...edgeProps } = edge;
+        const {from: fromObj, to: toObj, ...edgeProps} = edge;
         nodeInfo[fromObj.id] = fromObj;
         nodeInfo[toObj.id] = toObj;
         if (ignored.find(s => s.id === fromObj.id || s.id === toObj.id)) continue;
         if (!graph[fromObj.id]) graph[fromObj.id] = [];
-        graph[fromObj.id].push({ id: toObj.id, ...edgeProps });
+        graph[fromObj.id].push({id: toObj.id, ...edgeProps});
     }
     if (!preferSafer) {
         if (!nodeInfo[fromId]) return [];
@@ -484,8 +475,8 @@ const findShortestRoute = (conns, fromId, toIds, ignored, preferSafer) => {
             const neighbours = graph[lastPathNode.id] || [];
             for (const neighbour of neighbours) {
                 if (!visited.has(neighbour.id)) {
-                    const { id: neighbourId, ...edgeData } = neighbour;
-                    const lastNodeWithEdgeData = { ...lastPathNode, ...edgeData };
+                    const {id: neighbourId, ...edgeData} = neighbour;
+                    const lastNodeWithEdgeData = {...lastPathNode, ...edgeData};
                     const newPath = [...path.slice(0, -1), lastNodeWithEdgeData, nodeInfo[neighbourId]];
                     queue.push(newPath);
                 }
@@ -495,7 +486,7 @@ const findShortestRoute = (conns, fromId, toIds, ignored, preferSafer) => {
     }
     const safetyWeight = 1000;
     if (!nodeInfo[fromId]) return [];
-    const pq = [{ path: [nodeInfo[fromId]], cost: 0 }];
+    const pq = [{path: [nodeInfo[fromId]], cost: 0}];
     const costs = new Map();
     costs.set(fromId, 0);
     const getNext = () => {
@@ -506,7 +497,7 @@ const findShortestRoute = (conns, fromId, toIds, ignored, preferSafer) => {
         return pq.splice(bestIndex, 1)[0];
     };
     while (pq.length > 0) {
-        const { path, cost: currentCost } = getNext();
+        const {path, cost: currentCost} = getNext();
         const lastPathNode = path[path.length - 1];
         if (currentCost > costs.get(lastPathNode.id)) continue;
         if (toIdsSet.has(lastPathNode.id)) return path;
@@ -517,10 +508,10 @@ const findShortestRoute = (conns, fromId, toIds, ignored, preferSafer) => {
             const newCost = currentCost + hopCost;
             if (!costs.has(neighbour.id) || newCost < costs.get(neighbour.id)) {
                 costs.set(neighbour.id, newCost);
-                const { id: neighbourId, ...edgeData } = neighbour;
-                const lastNodeWithEdgeData = { ...lastPathNode, ...edgeData };
+                const {id: neighbourId, ...edgeData} = neighbour;
+                const lastNodeWithEdgeData = {...lastPathNode, ...edgeData};
                 const newPath = [...path.slice(0, -1), lastNodeWithEdgeData, nodeInfo[neighbourId]];
-                pq.push({ path: newPath, cost: newCost });
+                pq.push({path: newPath, cost: newCost});
             }
         }
     }
