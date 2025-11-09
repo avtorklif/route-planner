@@ -162,17 +162,24 @@ const getSecurityColor = (security) => {
 const parseBookmarks = (input) => {
     bookmarkConnections = [];
     input.split('\n').map((line) => line.split('\t')).forEach(bookmark => {
-        const bookName = bookmark[0];
+        const bookName = bookmark[0].replace("*", "");
         const fromSystem = bookmark[3]?.replace("*", "");
         const sigRegex = /\b[A-Z]{3}-\d{3}\b/;
         const match = bookName.match(sigRegex);
         const now = Date.now();
         if (match) {
             const sig = match[0];
-            const toSystems = systemNames.filter(s => bookName.toLowerCase().includes(s.toLowerCase()));
+            let toSystems = systemNames.filter(s => bookName.split(/\s+/).includes(s));
+            if (toSystems.length === 0) {
+                toSystems = systemNames.filter(s => bookName.toLowerCase().split(/\s+/).includes(s.toLowerCase()));
+            }
+            if (toSystems.length === 0) {
+                toSystems = systemNames.filter(s => bookName.toLowerCase().includes(s.toLowerCase()));
+            }
             let toSystem;
+            toSystems = toSystems.filter(s => bookName.indexOf(sig) !== bookName.toLowerCase().indexOf(s.toLowerCase()))
             if (toSystems.length > 1) {
-                toSystem = toSystems.find(s => !Data.tradeHubs.find(th => th.toLowerCase() === s.toLowerCase()));
+                toSystem = toSystems.find(s => !Data.tradeHubs.find(th => th.toLowerCase() === s.toLowerCase()) && bookName.indexOf(sig) !== bookName.toLowerCase().indexOf(s.toLowerCase()));
             } else if (toSystems.length === 1) {
                 toSystem = toSystems[0];
             }
