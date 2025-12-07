@@ -48,6 +48,8 @@ const initialize = async () => {
         });
     });
 
+    document.getElementById('aridia-safe')?.addEventListener('change', generateRoute);
+
     fromInput.addEventListener('keydown', (event) => {
         if (event.key === 'Tab' && fromAwesomplete.opened && fromAwesomplete.ul.children.length > 0) {
             event.preventDefault();
@@ -216,6 +218,7 @@ const generateRoute = () => {
     const fromId = Data.systems.find(o => o.name.toLowerCase() === from.toLowerCase())?.id;
     let toId = Data.systems.find(o => o.name.toLowerCase() === to.toLowerCase())?.id;
     let isToRegion = false;
+    const isAridiaSafe = document.getElementById('aridia-safe')?.checked || false;
 
     if (!toId) {
         toId = Data.regions.find(o => o.name.toLowerCase() === to.toLowerCase())?.id;
@@ -228,10 +231,10 @@ const generateRoute = () => {
         })
         let route = [];
         if (!isToRegion) {
-            route = findShortestRoute(allConnections, fromId, [toId], ignoredSystemsData, preferSafer);
+            route = findShortestRoute(allConnections, fromId, [toId], ignoredSystemsData, preferSafer, isAridiaSafe);
         } else {
             const regionSystemIds = Data.systems.filter(s => s.region.id === toId).map(s => s.id);
-            route = findShortestRoute(allConnections, fromId, regionSystemIds, ignoredSystemsData, preferSafer);
+            route = findShortestRoute(allConnections, fromId, regionSystemIds, ignoredSystemsData, preferSafer, isAridiaSafe);
         }
         const barsContainer = document.getElementById('bars-container');
         const jumpsLabel = document.getElementById('jumps');
@@ -457,10 +460,10 @@ const roundSystemSecurity = (security) => {
 
 const formatAge = (ageMinutes) => `${Math.floor(ageMinutes / 60)}h${Math.floor(ageMinutes % 60)}m`
 
-const findShortestRoute = (conns, fromId, toIds, ignored, preferSafer) => {
+const findShortestRoute = (conns, fromId, toIds, ignored, preferSafer, isAridiaSafe) => {
     const toIdsSet = new Set(toIds);
     const graph = {};
-    const nodeInfo = {}; // Will store the full object for each node
+    const nodeInfo = {};
     for (const edge of conns) {
         const {from: fromObj, to: toObj, ...edgeProps} = edge;
         nodeInfo[fromObj.id] = fromObj;
@@ -469,29 +472,7 @@ const findShortestRoute = (conns, fromId, toIds, ignored, preferSafer) => {
         if (!graph[fromObj.id]) graph[fromObj.id] = [];
         graph[fromObj.id].push({id: toObj.id, ...edgeProps});
     }
-    if (!preferSafer) {
-        if (!nodeInfo[fromId]) return [];
-        const queue = [[nodeInfo[fromId]]];
-        const visited = new Set();
-        while (queue.length > 0) {
-            const path = queue.shift();
-            const lastPathNode = path[path.length - 1];
-            if (toIdsSet.has(lastPathNode.id)) return path;
-            if (visited.has(lastPathNode.id)) continue;
-            visited.add(lastPathNode.id);
-            const neighbours = graph[lastPathNode.id] || [];
-            for (const neighbour of neighbours) {
-                if (!visited.has(neighbour.id)) {
-                    const {id: neighbourId, ...edgeData} = neighbour;
-                    const lastNodeWithEdgeData = {...lastPathNode, ...edgeData};
-                    const newPath = [...path.slice(0, -1), lastNodeWithEdgeData, nodeInfo[neighbourId]];
-                    queue.push(newPath);
-                }
-            }
-        }
-        return [];
-    }
-    const safetyWeight = 1000;
+    const safetyWeight = preferSafer ? 1000 : 0.001;
     if (!nodeInfo[fromId]) return [];
     const pq = [{path: [nodeInfo[fromId]], cost: 0}];
     const costs = new Map();
@@ -509,7 +490,10 @@ const findShortestRoute = (conns, fromId, toIds, ignored, preferSafer) => {
         if (currentCost > costs.get(lastPathNode.id)) continue;
         if (toIdsSet.has(lastPathNode.id)) return path;
         const neighbours = graph[lastPathNode.id] || [];
-        const isCurrentNodeSafe = parseFloat(lastPathNode.security.toFixed(1)) >= 0.5;
+        const isAridia = lastPathNode.region.name === 'Aridia';
+        const isDefaultSafe = parseFloat(lastPathNode.security.toFixed(1)) >= 0.5;
+        const isCurrentNodeSafe = isDefaultSafe || (isAridiaSafe && isAridia);
+
         const hopCost = 1 + (isCurrentNodeSafe ? 0 : safetyWeight);
         for (const neighbour of neighbours) {
             const newCost = currentCost + hopCost;
