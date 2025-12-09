@@ -164,7 +164,7 @@ const getSecurityColor = (security) => {
 const parseBookmarks = (input) => {
     bookmarkConnections = [];
     input.split('\n').map((line) => line.split('\t')).forEach(bookmark => {
-        const bookName = bookmark[0].replace("*", "");
+        const bookName = bookmark[0].replace("*", "").replace(",", " ");
         const fromSystem = bookmark[3]?.replace("*", "");
         const sigRegex = /\b[A-Z]{3}-\d{3}\b/;
         const match = bookName.match(sigRegex);
