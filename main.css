@@ -117,6 +117,7 @@ h2 {
     margin-left: 12px;
     height: 40px;
     align-items: center;
+    flex-wrap: wrap;
 }
 .radio-group .radio-label {
     display: flex;

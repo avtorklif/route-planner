@@ -12,7 +12,9 @@ let bookmarkConnections = [];
 let eveScoutConnections = [];
 const ignoredSystemsData = [];
 let preferSafer = false;
+let allowBoJump = false;
 let systemsDict = {};
+let jumpsDict = {};
 
 const initialize = async () => {
     systemNames = Data.systems.map(d => d.name).sort((a, b) => b.length - a.length);
@@ -21,7 +23,10 @@ const initialize = async () => {
         return acc;
     }, {});
     regionNames = Data.regions.map(d => d.name);
+
     await loadEveScoutBookmarks();
+    await loadJumpsData();
+
     const fromInput = document.getElementById('from');
     const toInput = document.getElementById('to');
     const awesompleteFromConfig = {
@@ -49,6 +54,12 @@ const initialize = async () => {
     });
 
     document.getElementById('aridia-safe')?.addEventListener('change', generateRoute);
+
+    const boJumpCheckbox = document.getElementById('allow-bo-jump');
+    boJumpCheckbox?.addEventListener('change', (event) => {
+        allowBoJump = event.target.checked;
+        generateRoute();
+    });
 
     fromInput.addEventListener('keydown', (event) => {
         if (event.key === 'Tab' && fromAwesomplete.opened && fromAwesomplete.ul.children.length > 0) {
@@ -111,6 +122,23 @@ const initialize = async () => {
     });
 
     updateIgnoredSystems();
+};
+
+const loadJumpsData = async () => {
+    try {
+        const response = await fetch("jumpRangeData.json");
+        if (response.ok) {
+            const data = await response.json();
+            jumpsDict = data.reduce((acc, obj) => {
+                acc[obj.id] = obj.jumpTo;
+                return acc;
+            }, {});
+        } else {
+            console.error(`Failed to load jumps.json: ${response.status}`);
+        }
+    } catch (error) {
+        console.error("Error fetching jumps data:", error);
+    }
 };
 
 const updateIgnoredSystems = () => {
@@ -211,7 +239,6 @@ const parseBookmarks = (input) => {
     })
 };
 
-
 const generateRoute = () => {
     const from = document.getElementById("from").value;
     const to = document.getElementById("to").value;
@@ -231,10 +258,10 @@ const generateRoute = () => {
         })
         let route = [];
         if (!isToRegion) {
-            route = findShortestRoute(allConnections, fromId, [toId], ignoredSystemsData, preferSafer, isAridiaSafe);
+            route = findShortestRoute(allConnections, fromId, [toId], ignoredSystemsData, preferSafer, isAridiaSafe, allowBoJump);
         } else {
             const regionSystemIds = Data.systems.filter(s => s.region.id === toId).map(s => s.id);
-            route = findShortestRoute(allConnections, fromId, regionSystemIds, ignoredSystemsData, preferSafer, isAridiaSafe);
+            route = findShortestRoute(allConnections, fromId, regionSystemIds, ignoredSystemsData, preferSafer, isAridiaSafe, allowBoJump);
         }
         const barsContainer = document.getElementById('bars-container');
         const jumpsLabel = document.getElementById('jumps');
@@ -340,8 +367,10 @@ const ignoreSystem = (id) => {
 };
 
 const unIgnoreSystem = (id) => {
-    const ignoredSystemIndex = systemsDict[id];
-    ignoredSystemsData.splice(ignoredSystemIndex, 1);
+    const index = ignoredSystemsData.findIndex(s => s.id === id);
+    if (index !== -1) {
+        ignoredSystemsData.splice(index, 1);
+    }
     generateRoute();
     updateIgnoredSystems();
 };
@@ -460,7 +489,7 @@ const roundSystemSecurity = (security) => {
 
 const formatAge = (ageMinutes) => `${Math.floor(ageMinutes / 60)}h${Math.floor(ageMinutes % 60)}m`
 
-const findShortestRoute = (conns, fromId, toIds, ignored, preferSafer, isAridiaSafe) => {
+const findShortestRoute = (conns, fromId, toIds, ignored, preferSafer, isAridiaSafe, allowBoJump) => {
     const toIdsSet = new Set(toIds);
     const graph = {};
     const nodeInfo = {};
@@ -489,7 +518,31 @@ const findShortestRoute = (conns, fromId, toIds, ignored, preferSafer, isAridiaS
         const lastPathNode = path[path.length - 1];
         if (currentCost > costs.get(lastPathNode.id)) continue;
         if (toIdsSet.has(lastPathNode.id)) return path;
-        const neighbours = graph[lastPathNode.id] || [];
+
+        const neighbours = [...(graph[lastPathNode.id] || [])];
+
+        if (allowBoJump) {
+            const currentSec = parseFloat(roundSystemSecurity(lastPathNode.security));
+            if (currentSec < 0.5) {
+                const jumpTargets = jumpsDict[lastPathNode.id] || [];
+                for (const targetId of jumpTargets) {
+                    if (toIdsSet.has(targetId)) {
+                        const targetSystem = systemsDict[targetId];
+                        if (targetSystem) {
+                            const targetSec = parseFloat(roundSystemSecurity(targetSystem.security));
+                            if (targetSec < 0.5) {
+                                neighbours.push({
+                                    id: targetId,
+                                    sig: "BO jump"
+                                });
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         const isAridia = lastPathNode.region.name === 'Aridia';
         const isDefaultSafe = parseFloat(lastPathNode.security.toFixed(1)) >= 0.5;
         const isCurrentNodeSafe = isDefaultSafe || (isAridiaSafe && isAridia);
@@ -501,7 +554,7 @@ const findShortestRoute = (conns, fromId, toIds, ignored, preferSafer, isAridiaS
                 costs.set(neighbour.id, newCost);
                 const {id: neighbourId, ...edgeData} = neighbour;
                 const lastNodeWithEdgeData = {...lastPathNode, ...edgeData};
-                const newPath = [...path.slice(0, -1), lastNodeWithEdgeData, nodeInfo[neighbourId]];
+                const newPath = [...path.slice(0, -1), lastNodeWithEdgeData, systemsDict[neighbourId] || nodeInfo[neighbourId]];
                 pq.push({path: newPath, cost: newCost});
             }
         }
