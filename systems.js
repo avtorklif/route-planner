@@ -48901,7 +48901,7 @@ Data.systems = [
     },
     {
         "id": 31000001,
-        "name": "J055520",
+        "name": "Sentinel MZ",
         "security": -0.99,
         "region": {
             "id": 11000033,
@@ -48910,7 +48910,7 @@ Data.systems = [
     },
     {
         "id": 31000002,
-        "name": "J110145",
+        "name": "Liberated Barbican",
         "security": -0.99,
         "region": {
             "id": 11000033,
@@ -48919,7 +48919,7 @@ Data.systems = [
     },
     {
         "id": 31000003,
-        "name": "J164710",
+        "name": "Sanctified Vidette",
         "security": -0.99,
         "region": {
             "id": 11000033,
@@ -48928,7 +48928,7 @@ Data.systems = [
     },
     {
         "id": 31000004,
-        "name": "J200727",
+        "name": "Conflux Eyrie",
         "security": -0.99,
         "region": {
             "id": 11000033,
@@ -48946,7 +48946,7 @@ Data.systems = [
     },
     {
         "id": 31000006,
-        "name": "J174618",
+        "name": "Azdaja Redoubt",
         "security": -0.99,
         "region": {
             "id": 11000033,

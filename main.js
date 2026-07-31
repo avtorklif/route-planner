@@ -16,6 +16,14 @@ let allowBoJump = false;
 let systemsDict = {};
 let jumpsDict = {};
 
+const drifterWormholeAliases = {
+    "S877": "Sentinel MZ",
+    "B735": "Liberated Barbican",
+    "V928": "Sanctified Vidette",
+    "C414": "Conflux Eyrie",
+    "R259": "Azdaja Redoubt"
+};
+
 const initialize = async () => {
     systemNames = Data.systems.map(d => d.name).sort((a, b) => b.length - a.length);
     systemsDict = Data.systems.reduce((acc, obj) => {
@@ -205,6 +213,12 @@ const parseBookmarks = (input) => {
             }
             if (toSystems.length === 0) {
                 toSystems = systemNames.filter(s => bookName.toLowerCase().includes(s.toLowerCase()));
+            }
+            if (toSystems.length === 0) {
+                const whCode = Object.keys(drifterWormholeAliases).find(code => new RegExp(`\\b${code}\\b`).test(bookName));
+                if (whCode) {
+                    toSystems = [drifterWormholeAliases[whCode]];
+                }
             }
             let toSystem;
             toSystems = toSystems.filter(s => bookName.indexOf(sig) !== bookName.toLowerCase().indexOf(s.toLowerCase()))
